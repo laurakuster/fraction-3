@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fraction Quest – ULIS Collège</title>
+<style>
+:root{--bg:#111827;--card:#1f2937;--ink:#f8fafc;--muted:#cbd5e1;--cyan:#22d3ee;--pink:#fb7185;--lime:#a3e635;--amber:#fbbf24;--violet:#a78bfa}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at top,#243b55,#0f172a 55%);color:var(--ink);min-height:100vh}
+.wrap{max-width:980px;margin:auto;padding:20px}.top{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.logo{font-size:clamp(28px,6vw,56px);font-weight:1000;letter-spacing:-2px}.logo span{color:var(--cyan)}
+.badge{background:#ffffff18;border:1px solid #ffffff25;padding:10px 14px;border-radius:18px}
+.card{background:#ffffff10;border:1px solid #ffffff20;box-shadow:0 20px 50px #0006;border-radius:28px;padding:clamp(18px,4vw,34px);margin-top:18px;backdrop-filter:blur(10px)}
+.progress{height:15px;background:#ffffff18;border-radius:20px;overflow:hidden}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--lime));transition:.35s}
+h2{font-size:clamp(24px,4vw,38px);margin:10px 0}.instruction{color:var(--muted);font-size:18px}.visual{min-height:180px;display:flex;align-items:center;justify-content:center;gap:34px;flex-wrap:wrap;margin:20px 0}
+.answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ans{border:2px solid #ffffff25;background:#ffffff10;color:white;border-radius:18px;padding:18px;font-size:22px;font-weight:800;cursor:pointer;transition:.15s}.ans:hover,.ans:focus{transform:translateY(-2px);border-color:var(--cyan);outline:none}.ans.good{background:#65a30d}.ans.bad{background:#be123c}
+.feedback{min-height:52px;margin-top:15px;font-size:20px;font-weight:800}.next{display:none;border:0;background:var(--cyan);color:#082f49;padding:14px 24px;border-radius:16px;font-size:18px;font-weight:900;cursor:pointer}
+.frac{display:inline-grid;grid-template-rows:auto 2px auto;vertical-align:middle;text-align:center;line-height:1.05;min-width:34px;font-size:32px;font-weight:900}.frac i{background:currentColor;margin:3px 0}
+.pair{font-size:36px;font-weight:900;display:flex;align-items:center;gap:18px}.signbox{width:56px;height:56px;border:3px dashed var(--cyan);border-radius:14px;display:grid;place-items:center}
+.strip{display:flex;width:250px;height:60px;border:3px solid white;border-radius:8px;overflow:hidden}.cell{flex:1;border-right:2px solid white}.cell:last-child{border:0}.fill{background:var(--amber)}
+.pie{width:150px;height:150px;border-radius:50%;border:4px solid white;background:conic-gradient(var(--pink) 0 var(--p),transparent var(--p) 100%);position:relative}.pie:after{content:"";position:absolute;inset:0;border-radius:50%;background:repeating-conic-gradient(transparent 0 calc(360deg/var(--d) - 2deg),white calc(360deg/var(--d) - 2deg) calc(360deg/var(--d)))}
+.start{text-align:center}.start p{font-size:20px;color:var(--muted);max-width:700px;margin:10px auto 24px}.start button,.restart{border:0;background:linear-gradient(90deg,var(--pink),var(--amber));padding:17px 30px;border-radius:18px;font-size:22px;font-weight:1000;cursor:pointer}
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.chip{padding:7px 11px;border-radius:999px;background:#ffffff12;font-weight:700}.score{font-size:22px;font-weight:900}.hidden{display:none!important}
+@media(max-width:600px){.answers{grid-template-columns:1fr}.visual{gap:18px}.strip{width:210px}.pair{font-size:28px}}
+</style>
+</head>
+<body><div class="wrap">
+<div class="top"><div class="logo">⚡ <span>FRACTION</span> QUEST</div><div class="badge">🎮 ULIS Collège • 12 défis</div></div>
+<div id="start" class="card start">
+<h2>Prêt·e pour la mission fractions ? 🚀</h2>
+<p>Des défis courts, des figures pour t’aider et un retour immédiat. Pas de chrono : tu avances à ton rythme.</p>
+<div class="chips"><span class="chip">✍️ Écrire</span><span class="chip">⚖️ Comparer</span><span class="chip">➕ Additionner</span><span class="chip">➖ Soustraire</span></div>
+<br><button onclick="begin()">Démarrer la mission</button>
+</div>
+<div id="game" class="hidden">
+<div class="card"><div class="top"><div id="step">Défi 1 / 12</div><div class="score">⭐ <span id="score">0</span></div></div><div class="progress"><div class="bar" id="bar"></div></div></div>
+<div class="card">
+<div id="tag" class="chip" style="display:inline-block"></div>
+<h2 id="question"></h2><div id="instruction" class="instruction"></div>
+<div id="visual" class="visual"></div><div id="answers" class="answers"></div>
+<div id="feedback" class="feedback"></div><button id="next" class="next" onclick="nextQ()">Défi suivant ➜</button>
+</div></div>
+<div id="end" class="card start hidden"><h2>Mission terminée ! 🏆</h2><div id="final" style="font-size:30px;font-weight:1000"></div><p id="msg"></p><button class="restart" onclick="location.reload()">Rejouer</button></div>
+</div>
+<script>
+const F=(n,d)=>`<span class="frac"><b>${n}</b><i></i><b>${d}</b></span>`;
+const strip=(n,d,color='var(--amber)')=>`<div class="strip">${Array.from({length:d},(_,i)=>`<div class="cell ${i<n?'fill':''}" style="${i<n?`background:${color}`:''}"></div>`).join('')}</div>`;
+const pie=(n,d)=>`<div class="pie" style="--p:${n/d*100}%;--d:${d}"></div>`;
+const qs=[
+{t:"ÉCRIRE",q:"Quelle fraction est représentée ?",i:"Compte les parts coloriées, puis le nombre total de parts.",v:strip(3,5),a:["3/5","5/3","2/5","3/4"],ok:0,e:"3 parts coloriées sur 5 parts : 3/5."},
+{t:"ÉCRIRE",q:"Quelle fraction montre ce disque ?",i:"Le numérateur = parts coloriées. Le dénominateur = toutes les parts.",v:pie(1,4),a:["1/4","4/1","3/4","1/3"],ok:0,e:"1 part sur 4 est coloriée : 1/4."},
+{t:"ÉCRIRE",q:"Choisis l’écriture correcte.",i:"Observe la bande.",v:strip(5,8,'var(--violet)'),a:["5/8","3/8","8/5","5/7"],ok:0,e:"5 parts coloriées sur 8 : 5/8."},
+{t:"COMPARER",q:"Quel signe faut-il mettre ?",i:"Même dénominateur : compare les numérateurs.",v:`<div class="pair">${F(3,7)} <span class="signbox">?</span> ${F(5,7)}</div><div>${strip(3,7)}<br><br>${strip(5,7,'var(--cyan)')}</div>`,a:["<",">","="],ok:0,e:"3/7 < 5/7 : 3 parts, c’est moins que 5 parts."},
+{t:"COMPARER",q:"Quel signe faut-il mettre ?",i:"Les deux fractions ont le même dénominateur.",v:`<div class="pair">${F(6,8)} <span class="signbox">?</span> ${F(2,8)}</div>`,a:["<",">","="],ok:1,e:"6/8 > 2/8."},
+{t:"COMPARER",q:"Quelle fraction est la plus grande ?",i:"Le numérateur vaut 1. Imagine une pizza partagée.",v:`<div>${pie(1,3)}<div style="text-align:center">${F(1,3)}</div></div><div>${pie(1,6)}<div style="text-align:center">${F(1,6)}</div></div>`,a:["1/3","1/6","Elles sont égales"],ok:0,e:"1/3 est plus grand : partager en 3 donne une part plus grande que partager en 6."},
+{t:"COMPARER",q:"Complète la comparaison.",i:"Avec un numérateur 1, plus le dénominateur est grand, plus la part est petite.",v:`<div class="pair">${F(1,8)} <span class="signbox">?</span> ${F(1,4)}</div>`,a:["<",">","="],ok:0,e:"1/8 < 1/4."},
+{t:"ADDITIONNER",q:"Calcule.",i:"Même dénominateur : additionne les numérateurs.",v:`<div class="pair">${F(2,7)} + ${F(3,7)} = ?</div><div>${strip(2,7)}<br><br>${strip(3,7,'var(--cyan)')}</div>`,a:["5/7","5/14","1/7","6/7"],ok:0,e:"2/7 + 3/7 = 5/7. Le dénominateur reste 7."},
+{t:"ADDITIONNER",q:"Trouve le résultat.",i:"Les parts ont toutes la même taille.",v:`<div class="pair">${F(1,6)} + ${F(4,6)} = ?</div>`,a:["5/6","5/12","3/6","4/6"],ok:0,e:"1/6 + 4/6 = 5/6."},
+{t:"SOUSTRAIRE",q:"Calcule.",i:"Même dénominateur : soustrais les numérateurs.",v:`<div class="pair">${F(6,8)} − ${F(2,8)} = ?</div>`,a:["4/8","4/16","8/8","3/8"],ok:0,e:"6/8 − 2/8 = 4/8."},
+{t:"SOUSTRAIRE",q:"Combien reste-t-il ?",i:"On enlève 3 parts sur les 7 parts coloriées.",v:strip(7,9,'var(--lime)'),a:["4/9","4/18","10/9","3/9"],ok:0,e:"7/9 − 3/9 = 4/9."},
+{t:"BOSS FINAL 👾",q:"Choisis l’affirmation vraie.",i:"Utilise ce que tu as appris.",v:`<div style="font-size:28px">🏁 Dernier défi !</div>`,a:["4/9 > 7/9","1/5 > 1/2","2/6 + 3/6 = 5/6","7/8 − 2/8 = 5/16"],ok:2,e:"Bravo : 2/6 + 3/6 = 5/6."}
+];
+let k=0,points=0,locked=false;
+function begin(){start.classList.add("hidden");game.classList.remove("hidden");render()}
+function render(){locked=false;next.style.display="none";feedback.innerHTML="";step.textContent=`Défi ${k+1} / ${qs.length}`;bar.style.width=`${k/qs.length*100}%`;scoreEl();let x=qs[k];tag.textContent=x.t;question.textContent=x.q;instruction.textContent=x.i;visual.innerHTML=x.v;answers.innerHTML="";x.a.forEach((z,j)=>{let b=document.createElement("button");b.className="ans";b.textContent=z;b.onclick=()=>pick(j,b);answers.appendChild(b)})}
+function scoreEl(){document.getElementById("score").textContent=points}
+function pick(j,b){if(locked)return;locked=true;let x=qs[k];[...answers.children].forEach((el,idx)=>{if(idx===x.ok)el.classList.add("good")});if(j===x.ok){points++;b.classList.add("good");feedback.innerHTML="✅ Bien joué ! "+x.e}else{b.classList.add("bad");feedback.innerHTML="💡 Presque ! "+x.e}scoreEl();next.style.display="inline-block"}
+function nextQ(){k++;if(k<qs.length)render();else finish()}
+function finish(){game.classList.add("hidden");end.classList.remove("hidden");bar.style.width="100%";final.textContent=`⭐ ${points} / ${qs.length}`;msg.textContent=score>=10?"Super mission ! Tu maîtrises très bien ces fractions.":score>=7?"Bravo ! Encore une partie pour consolider les réflexes.":"Bien joué d’être allé jusqu’au bout. Rejoue : les figures peuvent t’aider à progresser."}
+</script></body></html>
